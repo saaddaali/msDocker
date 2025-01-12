@@ -1,0 +1,91 @@
+# in visuale studio code "ctrl + shift + p " then use this "Convert Indentation to Spaces" : formatage
+services:
+
+  eureka-server:
+    build: ../Eureka Server
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - app-network
+
+  gateway-service:
+    build: ../ServiceGateway
+    container_name: gateway-service
+    ports:
+      - "8888:8888"
+    depends_on:
+      - eureka-server
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    networks:
+      - app-network
+
+  client-service:
+    build: ../Client
+    container_name: client-service
+    ports:
+      - "8088:8088"
+    depends_on:
+      - eureka-server
+      - client-db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://client-db:3306/client?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    networks:
+      - app-network
+
+  voiture-service:
+    build: ../Voiture
+    container_name: voiture-service
+    ports:
+      - "8089:8089"
+    depends_on:
+      - eureka-server
+      - client-db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://client-db:3306/client?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    networks:
+      - app-network
+
+  client-db:
+    image: mysql:8.0
+    container_name: client-db
+    environment:
+      - MYSQL_DATABASE=client
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_ALLOW_EMPTY_PASSWORD=no
+    ports:
+      - "3306:3306"
+    volumes:
+      - client_data:/var/lib/mysql
+    networks:
+      - app-network
+    command: --default-authentication-plugin=mysql_native_password
+
+
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin-client
+    environment:
+      - PMA_HOST=db
+      - MYSQL_ROOT_PASSWORD=root
+    ports:
+      - "8085:80"
+    networks:
+      - app-network
+
+
+volumes:
+  client_data:
+
+networks:
+  app-network:
+    driver: bridge
+
